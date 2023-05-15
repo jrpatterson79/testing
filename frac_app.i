@@ -111,7 +111,7 @@ injection_rate = 1
   type = Transient
   solve_type = NEWTON
   [TimeStepper]
-    type = IterationAdaptiveDT #ConstantDT
+    type = IterationAdaptiveDT
     dt = 1
     growth_factor = 1.05
     optimal_iterations = 6
