@@ -160,7 +160,7 @@
 [DiracKernels]
   [mass_flux_source]
     type = PorousFlowSquarePulsePointSource
-    mass_flux = 10
+    mass_flux = 1
     point = '0 0 0'
     block = 1
     variable = pp
@@ -312,7 +312,7 @@
     growth_factor = 1.05
     optimal_iterations = 6
   []
-  end_time = 1e1
+  end_time = 1e3
   # fixed_point_max_its = 10
   l_max_its = 60
   nl_forced_its = 1
