@@ -245,7 +245,7 @@ endTime = 1e3
     optimal_iterations = 6
   []
   end_time = ${endTime}
-  fixed_point_max_its = 10
+  # fixed_point_max_its = 10
   l_max_its = 60
   nl_forced_its = 1
   nl_max_its = 40
