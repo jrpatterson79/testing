@@ -167,6 +167,7 @@
   []
 []
 
+[Modules]
 [FluidProperties]
   [water]
     type = SimpleFluidProperties
@@ -175,11 +176,10 @@
     viscosity = 1e-3
   []
 []
+[]
 
 [Materials]
-  [temp]
-    type = PorousFlowTemperature
-  []
+  # Fluid flow properties
   [mass_frac]
     type = PorousFlowMassFraction
   []
@@ -216,6 +216,7 @@
     type = PorousFlowRelativePermeabilityConst
     phase = 0
   []
+# Mechanical properties
   [elasticity_tensor]
     type = ComputeIsotropicElasticityTensor
     youngs_modulus = 3.795e10
@@ -236,6 +237,10 @@
     prop_names = biot_coefficient
     prop_values = 0.5
     block = 2
+  []
+  # Energy / temperature properties
+  [temp]
+    type = PorousFlowTemperature
   []
 []
 
@@ -272,23 +277,20 @@
     block = 2
   []
   [poro_x]
-    type = PoroMechanicsCoupling
+    type = PorousFlowEffectiveStressCoupling
     variable = disp_x
-    porepressure = pp
     component = 0
     block = 2
   []
   [poro_y]
-    type = PoroMechanicsCoupling
+    type = PorousFlowEffectiveStressCoupling
     variable = disp_y
-    porepressure = pp
     component = 1
     block = 2
   []
   [poro_z]
-    type = PoroMechanicsCoupling
+    type = PorousFlowEffectiveStressCoupling
     variable = disp_z
-    porepressure = pp
     component = 2
     block = 2
   []
