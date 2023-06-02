@@ -10,10 +10,54 @@
     sidesets = '1'
     input = fmg
   []
+  [x_min]
+    type = SideSetsAroundSubdomainGenerator
+    block = 2
+    new_boundary = x_min
+    normal = '-1 0 0'
+    input = frac
+  []
+  [x_max]
+    type = SideSetsAroundSubdomainGenerator
+    block = 2
+    new_boundary = x_max
+    normal = '1 0 0'
+    input = x_min
+  []
+  [y_min]
+    type = SideSetsAroundSubdomainGenerator
+    block = 2
+    new_boundary = y_min
+    normal = '0 -1 0'
+    input = x_max
+  []
+  [y_max]
+    type = SideSetsAroundSubdomainGenerator
+    block = 2
+    new_boundary = y_max
+    normal = '0 1 0'
+    input = y_min
+  []
+  [z_min]
+    type = SideSetsAroundSubdomainGenerator
+    block = 2
+    new_boundary = z_min
+    normal = '0 0 -1'
+    input = y_max
+  []
+  [z_max]
+    type = SideSetsAroundSubdomainGenerator
+    block = 2
+    new_boundary = z_max
+    normal = '0 0 1'
+    input = z_min
+  []
 []
 
 [GlobalParams]
   PorousFlowDictator = dictator
+  multiply_by_density = false
+  use_displaced_mesh = true
   gravity = '0 0 0'
 []
 
@@ -38,6 +82,33 @@
   []
   [disp_z]
     scaling = 1e-10
+  []
+[]
+
+[BCs]
+  [const_press]
+    type = DirichletBC
+    variable = pp
+    boundary = 'x_min x_max y_min y_max'
+    value = 20e6
+  []
+  [no_flow]
+    type = NeumannBC
+    variable = pp
+    boundary = 'z_min z_max' 
+    value = 0
+  []
+  [roller_x]
+    type = DirichletBC
+    variable = disp_x
+    boundary = 'x_min x_max'
+    value = 0
+  []
+  [roller_y]
+    type = DirichletBC
+    variable = disp_y
+    boundary = 'y_min y_max'
+    value = 0
   []
 []
 
@@ -192,6 +263,9 @@
     type = PorousFlow1PhaseFullySaturated
     porepressure = pp
   []
+  [eff_fl_press]
+    type = PorousFlowEffectiveFluidPressure
+  []
   [frac_porosity]
     type = PorousFlowPorosityConst
     porosity = 3e-4
@@ -199,17 +273,17 @@
   []
   [rock_porosity]
     type = PorousFlowPorosityConst
-    porosity = 0.02
+    porosity = 0.002
     block = 2
   []
   [frac_perm]
     type = PorousFlowPermeabilityConst
-    permeability = '1e-12 0 0   0 1e-12 0   0 0 1e-12'
+    permeability = '1e-11 0 0   0 1e-11 0   0 0 1e-11'
     block = 1
   []
   [rock_perm]
     type = PorousFlowPermeabilityConst
-    permeability = '1e-18 0 0   0 1e-18 0   0 0 1e-18'
+    permeability = '1e-20 0 0   0 1e-20 0   0 0 1e-20'
     block = 2
   []
   [relp]
@@ -226,6 +300,13 @@
   [strain]
     type = ComputeSmallStrain
     displacements = 'disp_x disp_y disp_z'
+    eigenstrain_names = 'initial_stress'
+    block = 2
+  []
+  [initial_strain]
+    type = ComputeEigenstrainFromInitialStress
+    initial_stress = '20e6 0 0   0 20e6 0   0 0 20e6'
+    eigenstrain_name = initial_stress
     block = 2
   []
   [stress]
