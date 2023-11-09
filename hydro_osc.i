@@ -1,8 +1,7 @@
 aper_init = 3e-4
-period = 60 # Oscillation period in s
 dt = 5
-endTime = 600
-injection_amp = 1e-4 # Injection amplitude in (m^3/s)
+endTime = 60
+injection_rate = 0.1 # Injection amplitude in (m^3/s)
 p_atm = 101325
 file_name = hydro_osc
 
@@ -70,6 +69,8 @@ file_name = hydro_osc
     order = CONSTANT
     block = 'fracture'
   []
+  [tag_pp]
+  []
 []
 
 [AuxKernels]
@@ -96,6 +97,12 @@ file_name = hydro_osc
     variable = velocity_z
     component = z
     aperture = aperture
+  []
+  [tag_pp]
+    type = TagVectorAux
+    vector_tag = 'ref'
+    v = 'pp'
+    variable = 'tag_pp'
   []
 []
 
@@ -126,12 +133,12 @@ file_name = hydro_osc
 
 [Functions]
   # Periodic pumping signal
-  [mass_flux_fxn]
-    type = ParsedFunction
-    expression = 'if(t<0, 0, (Q_0*(1-exp(-t/P))*sin((t+(ph_off*P))*((2*pi)/P)))*3.5)'
-    symbol_names = 'Q_0 P ph_off b'
-    symbol_values = '${injection_amp} ${period} 0.5 ${aper_init}' 
-  []
+  # [mass_flux_fxn]
+  #   type = ParsedFunction
+  #   expression = 'if(t<0, 0, (Q_0*(1-exp(-t/P))*sin((t+(ph_off*P))*((2*pi)/P)))*3.5)'
+  #   symbol_names = 'Q_0 P ph_off b'
+  #   symbol_values = '${injection_amp} ${period} 0.5 ${aper_init}' 
+  # []
   # Hydrostatic pressure gradient
   [hydrostatic]
     type = ParsedFunction
@@ -147,6 +154,9 @@ file_name = hydro_osc
   []
 []
 
+[Problem]
+  extra_tag_vectors = 'ref'
+[]
 
 [PorousFlowBasicTHM]
   coupling_type = Hydro
@@ -154,7 +164,7 @@ file_name = hydro_osc
   fp = water
   gravity = '0 0 -9.81'
   use_displaced_mesh = false
-  multiply_by_density = false
+  multiply_by_density = true
 []
 
 [FluidProperties]
@@ -200,21 +210,22 @@ file_name = hydro_osc
 [DiracKernels]
   # Periodic Flux
   [mass_flux_source]
-    type = PorousFlowPointSourceFromPostprocessor
-    mass_flux = mass_flux_pp
+    type = PorousFlowSquarePulsePointSource
+    mass_flux = ${injection_rate}
     point = '0 0 175'
     variable = pp 
     block = 'fracture'
+    extra_vector_tags = 'ref'
   []
 []
 
 [Postprocessors]
   # Periodic pumping postprocessor
-  [mass_flux_pp]
-    type = FunctionValuePostprocessor
-    function = mass_flux_fxn
-    execute_on = TIMESTEP_BEGIN
-  []  
+  # [mass_flux_pp]
+  #   type = FunctionValuePostprocessor
+  #   function = mass_flux_fxn
+  #   execute_on = TIMESTEP_BEGIN
+  # []  
   [stim_p]
     type = PointValue
     point = '0 0 175'
@@ -298,7 +309,7 @@ file_name = hydro_osc
 []
 
 [Outputs]
-  exodus = false
+  exodus = true
   csv = true
   execute_on = 'INITIAL TIMESTEP_END'
   file_base = './out_files/${file_name}'
