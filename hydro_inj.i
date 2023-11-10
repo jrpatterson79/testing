@@ -1,9 +1,9 @@
 aper_init = 3e-4
 dt = 5
-endTime = 60
-injection_rate = 0.1 # Injection amplitude in (m^3/s)
+endTime = 50
+injection_rate = 0.1 # kg/s
 p_atm = 101325
-file_name = hydro_osc
+file_name = hydro_inj
 
 [Mesh]
   [fmg]
@@ -24,15 +24,6 @@ file_name = hydro_osc
   gravity = '0 0 -9.81'
 []
 
-[UserObjects]
-  [steady_solution]
-    type = SolutionUserObject
-    mesh = './out_files/hydro_steady.e'
-    system_variables = 'pp'
-    timestep = LATEST
-  []
-[]
-
 [Variables]
   [pp]
   []
@@ -50,10 +41,6 @@ file_name = hydro_osc
     order = CONSTANT
     block = 'fracture'
   []
-  [hydrostatic]
-    family = LAGRANGE
-    order = FIRST
-  []
   [velocity_x]
     family = MONOMIAL
     order = CONSTANT
@@ -69,7 +56,9 @@ file_name = hydro_osc
     order = CONSTANT
     block = 'fracture'
   []
-  [tag_pp]
+  [hydrostatic]
+    family = LAGRANGE
+    order = FIRST
   []
 []
 
@@ -98,12 +87,6 @@ file_name = hydro_osc
     component = z
     aperture = aperture
   []
-  [tag_pp]
-    type = TagVectorAux
-    vector_tag = 'ref'
-    v = 'pp'
-    variable = 'tag_pp'
-  []
 []
 
 [BCs]
@@ -124,22 +107,13 @@ file_name = hydro_osc
 
 [ICs]
   [pp_init]
-    type = SolutionIC
-    solution_uo = steady_solution
+    type = FunctionIC
     variable = pp
-    from_variable = 'pp'
+    function = hydrostatic
   []
 []
 
 [Functions]
-  # Periodic pumping signal
-  # [mass_flux_fxn]
-  #   type = ParsedFunction
-  #   expression = 'if(t<0, 0, (Q_0*(1-exp(-t/P))*sin((t+(ph_off*P))*((2*pi)/P)))*3.5)'
-  #   symbol_names = 'Q_0 P ph_off b'
-  #   symbol_values = '${injection_amp} ${period} 0.5 ${aper_init}' 
-  # []
-  # Hydrostatic pressure gradient
   [hydrostatic]
     type = ParsedFunction
     expression = 'p_atm + (rho_f*g*(z_max-z))'
@@ -148,23 +122,19 @@ file_name = hydro_osc
   []
   [mass_bal_pct]
     type = ParsedFunction
-    expression = '((in - out)/in) * 100'
+    expression = 'abs(in - out)'
     symbol_names = 'in out'
     symbol_values = 'fluid_in fluid_out'
   []
 []
 
-[Problem]
-  extra_tag_vectors = 'ref'
-[]
-
-[PorousFlowBasicTHM]
+[PorousFlowFullySaturated]
   coupling_type = Hydro
   porepressure = pp
   fp = water
   gravity = '0 0 -9.81'
-  use_displaced_mesh = false
   multiply_by_density = true
+  use_displaced_mesh = false
 []
 
 [FluidProperties]
@@ -208,60 +178,31 @@ file_name = hydro_osc
 
 # Hydraulic injection kernel
 [DiracKernels]
-  # Periodic Flux
   [mass_flux_source]
     type = PorousFlowSquarePulsePointSource
     mass_flux = ${injection_rate}
     point = '0 0 175'
     variable = pp 
     block = 'fracture'
-    extra_vector_tags = 'ref'
+    point_not_found_behavior = WARNING
   []
 []
 
 [Postprocessors]
-  # Periodic pumping postprocessor
-  # [mass_flux_pp]
-  #   type = FunctionValuePostprocessor
-  #   function = mass_flux_fxn
-  #   execute_on = TIMESTEP_BEGIN
-  # []  
-  [stim_p]
-    type = PointValue
-    point = '0 0 175'
-    variable = pp
-    outputs = csv
-  []
-  [obs4_p]
-    type = PointValue
-    point = '30 0 175'
-    variable = pp
-    outputs = csv
-  []
   [fluid_in]
     type = PorousFlowFluidMass
     execute_on = TIMESTEP_BEGIN
+    block = 'fracture'
   []
   [fluid_out]
     type = PorousFlowFluidMass
     execute_on = TIMESTEP_END
+    block = 'fracture'
   []
   [mass_blnc_pct]
     type = FunctionValuePostprocessor
     function = mass_bal_pct
     execute_on = TIMESTEP_END
-  []
-[]
-
-[VectorPostprocessors]
-  [press_profile]
-    type = LineValueSampler
-    variable = pp
-    start_point = '-80 0 175'
-    end_point = '80 0 175'
-    num_points = 300
-    sort_by = x
-    execute_on = 'TIMESTEP_END'
   []
 []
 
@@ -301,16 +242,16 @@ file_name = hydro_osc
   []
   start_time = -${dt}
   end_time = ${endTime}
-  l_tol = 1e-08
+  l_tol = 1e-12
   l_max_its = 60
   nl_forced_its = 1
   nl_max_its = 40
-  nl_abs_tol = 1e-08
+  nl_abs_tol = 1e-10
 []
 
 [Outputs]
   exodus = true
-  csv = true
+  csv = false
   execute_on = 'INITIAL TIMESTEP_END'
   file_base = './out_files/${file_name}'
 []
