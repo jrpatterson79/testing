@@ -275,7 +275,6 @@ file_name = hydro_inj
 [Executioner]
   type = Transient
   solve_type = NEWTON
-  # line_search = 'none'
   [TimeSteppers]
     active = constant
     [adaptive]
