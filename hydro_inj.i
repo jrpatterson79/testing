@@ -10,18 +10,21 @@ file_name = hydro_inj
     type = FileMeshGenerator
     file = 'multi_dim_mesh.e'
   []
-  [frac]
-    type = LowerDBlockFromSidesetGenerator
-    new_block_id = 1
-    new_block_name = 'fracture'
-    sidesets = '1'
-    input = fmg
-  []
 []
 
 [GlobalParams]
   PorousFlowDictator = dictator
+  multiply_by_density = true
   gravity = '0 0 -9.81'
+[]
+
+[UserObjects]
+  [dictator]
+  type = PorousFlowDictator
+  porous_flow_vars = 'pp'
+  number_fluid_phases = 1
+  number_fluid_components = 1
+  []
 []
 
 [Variables]
@@ -120,21 +123,30 @@ file_name = hydro_inj
     symbol_names = 'p_atm rho_f g z_max'
     symbol_values = '${p_atm} 998.23 9.81 225'
   []
-  [mass_bal_pct]
+  [rock_mass_bal]
     type = ParsedFunction
     expression = 'abs(in - out)'
     symbol_names = 'in out'
-    symbol_values = 'fluid_in fluid_out'
+    symbol_values = 'rock_fluid_in rock_fluid_out'
+  []
+  [frac_mass_bal]
+    type = ParsedFunction
+    expression = 'abs(in - out)'
+    symbol_names = 'in out'
+    symbol_values = 'frac_fluid_in frac_fluid_out'
   []
 []
 
-[PorousFlowFullySaturated]
-  coupling_type = Hydro
-  porepressure = pp
-  fp = water
-  gravity = '0 0 -9.81'
-  multiply_by_density = true
-  use_displaced_mesh = false
+[Kernels]
+  # Hydraulic Kernels
+  [frac_mass_deriv]
+    type = PorousFlowFullySaturatedMassTimeDerivative
+    variable = pp
+  []
+  [darcy_flow]
+    type = PorousFlowFullySaturatedDarcyBase
+    variable = pp
+  []
 []
 
 [FluidProperties]
@@ -147,7 +159,29 @@ file_name = hydro_inj
 []
 
 [Materials]
- [frac_aper]
+  [temp]
+    type = PorousFlowTemperature
+  []
+  [mass_frac]
+    type = PorousFlowMassFraction
+  []
+  [ppss]
+    type = PorousFlow1PhaseFullySaturated
+    porepressure = pp
+  []
+  [eff_press]
+    type = PorousFlowEffectiveFluidPressure
+  []
+  [fluid]
+    type = PorousFlowSingleComponentFluid
+    fp = water
+    phase = 0
+  []
+  [relp]
+    type = PorousFlowRelativePermeabilityConst
+    phase = 0
+  []
+  [frac_aper]
     type = PorousFlowPorosityConst
     porosity = aperture
     block = 'fracture'
@@ -189,19 +223,34 @@ file_name = hydro_inj
 []
 
 [Postprocessors]
-  [fluid_in]
+  [frac_fluid_in]
     type = PorousFlowFluidMass
     execute_on = TIMESTEP_BEGIN
     block = 'fracture'
   []
-  [fluid_out]
+  [frac_fluid_out]
     type = PorousFlowFluidMass
     execute_on = TIMESTEP_END
     block = 'fracture'
   []
-  [mass_blnc_pct]
+  [frac_mass_blnc]
     type = FunctionValuePostprocessor
-    function = mass_bal_pct
+    function = frac_mass_bal
+    execute_on = TIMESTEP_END
+  []
+  [rock_fluid_in]
+    type = PorousFlowFluidMass
+    execute_on = TIMESTEP_BEGIN
+    block = 'rock'
+  []
+  [rock_fluid_out]
+    type = PorousFlowFluidMass
+    execute_on = TIMESTEP_END
+    block = 'rock'
+  []
+  [rock_mass_blnc]
+    type = FunctionValuePostprocessor
+    function = rock_mass_bal
     execute_on = TIMESTEP_END
   []
 []
@@ -226,7 +275,7 @@ file_name = hydro_inj
 [Executioner]
   type = Transient
   solve_type = NEWTON
-  line_search = 'none'
+  # line_search = 'none'
   [TimeSteppers]
     active = constant
     [adaptive]
@@ -251,7 +300,6 @@ file_name = hydro_inj
 
 [Outputs]
   exodus = true
-  csv = false
   execute_on = 'INITIAL TIMESTEP_END'
   file_base = './out_files/${file_name}'
 []
