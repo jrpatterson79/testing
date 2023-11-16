@@ -10,6 +10,13 @@ file_name = hydro_inj
     type = FileMeshGenerator
     file = 'multi_dim_mesh.e'
   []
+  # [frac]
+  #   type = LowerDBlockFromSidesetGenerator
+  #   new_block_id = 1
+  #   new_block_name = 'fracture'
+  #   sidesets = 'fracture'
+  #   input = fmg
+  # []
 []
 
 [GlobalParams]
@@ -44,24 +51,14 @@ file_name = hydro_inj
     order = CONSTANT
     block = 'fracture'
   []
-  [velocity_x]
-    family = MONOMIAL
-    order = CONSTANT
-    block = 'fracture'
-  []
-  [velocity_y]
-    family = MONOMIAL
-    order = CONSTANT
-    block = 'fracture'
-  []
-  [velocity_z]
-    family = MONOMIAL
-    order = CONSTANT
-    block = 'fracture'
-  []
   [hydrostatic]
     family = LAGRANGE
     order = FIRST
+  []
+  [flux_tag]
+    order = FIRST
+    family = LAGRANGE
+    block = 'fracture'
   []
 []
 
@@ -72,23 +69,13 @@ file_name = hydro_inj
     coupled_variables = aperture
     expression = '(aperture * aperture * aperture)/12'
   []
-  [velocity_x]
-    type = PorousFlowDarcyVelocityComponentLowerDimensional
-    variable = velocity_x
-    component = x
-    aperture = aperture
-  []
-  [velocity_y]
-    type = PorousFlowDarcyVelocityComponentLowerDimensional
-    variable = velocity_y
-    component = y
-    aperture = aperture
-  []
-  [velocity_z]
-    type = PorousFlowDarcyVelocityComponentLowerDimensional
-    variable = velocity_z
-    component = z
-    aperture = aperture
+  [flux]
+    type = TagVectorAux
+    variable = flux_tag
+    v = pp
+    vector_tag = flux_tag
+    execute_on = timestep_end
+    block = 'fracture'
   []
 []
 
@@ -122,18 +109,6 @@ file_name = hydro_inj
     expression = 'p_atm + (rho_f*g*(z_max-z))'
     symbol_names = 'p_atm rho_f g z_max'
     symbol_values = '${p_atm} 998.23 9.81 225'
-  []
-  [rock_mass_bal]
-    type = ParsedFunction
-    expression = 'abs(in - out)'
-    symbol_names = 'in out'
-    symbol_values = 'rock_fluid_in rock_fluid_out'
-  []
-  [frac_mass_bal]
-    type = ParsedFunction
-    expression = 'abs(in - out)'
-    symbol_names = 'in out'
-    symbol_values = 'frac_fluid_in frac_fluid_out'
   []
 []
 
@@ -218,7 +193,9 @@ file_name = hydro_inj
     point = '0 0 175'
     variable = pp 
     block = 'fracture'
+    start_time = 0
     point_not_found_behavior = WARNING
+    extra_vector_tags = 'flux_tag'
   []
 []
 
@@ -234,8 +211,9 @@ file_name = hydro_inj
     block = 'fracture'
   []
   [frac_mass_blnc]
-    type = FunctionValuePostprocessor
-    function = frac_mass_bal
+    type = ParsedPostprocessor
+    function = 'abs(frac_fluid_in - frac_fluid_out)'
+    pp_names = 'frac_fluid_in frac_fluid_out'
     execute_on = TIMESTEP_END
   []
   [rock_fluid_in]
@@ -249,8 +227,9 @@ file_name = hydro_inj
     block = 'rock'
   []
   [rock_mass_blnc]
-    type = FunctionValuePostprocessor
-    function = rock_mass_bal
+    type = ParsedPostprocessor
+    function = 'abs(rock_fluid_in - rock_fluid_out)'
+    pp_names = 'rock_fluid_in rock_fluid_out'
     execute_on = TIMESTEP_END
   []
 []
@@ -297,8 +276,13 @@ file_name = hydro_inj
   nl_abs_tol = 1e-10
 []
 
+[Problem]
+  extra_tag_vectors = 'flux_tag'
+[]
+
 [Outputs]
   exodus = true
+  csv = false
   execute_on = 'INITIAL TIMESTEP_END'
   file_base = './out_files/${file_name}'
 []
